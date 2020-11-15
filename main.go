@@ -30,7 +30,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer client.Disconnect(ctx)
+	defer func() {
+		err = client.Disconnect(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	err = InitMongoDB(ctx, client)
 	if err != nil {
@@ -53,19 +58,14 @@ func main() {
 		switch action {
 		case 1:
 			Query()
-			break
 		case 2:
 			Statistics()
-			break
 		case 3:
 			Add()
-			break
 		case 4:
 			Update()
-			break
 		case 5:
 			fmt.Println("Bye!")
-			break
 		default:
 			fmt.Println("Action couldn't be parsed")
 		}
