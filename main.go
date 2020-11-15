@@ -1,12 +1,11 @@
 package main
 
 import (
-	"context"
+	"bufio"
+	"fmt"
 	"log"
-	"time"
-
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"os"
+	"strconv"
 )
 
 // NetflixTitle : Struct representing either a Movie or a TV Show
@@ -26,16 +25,49 @@ type NetflixTitle struct {
 }
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, client, cancel, err := ConnectMongoDB()
 	defer cancel()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
 
-	err = initDB(ctx, client)
+	err = InitMongoDB(ctx, client)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	scanner := bufio.NewScanner(os.Stdin)
+	for action := 0; action != 5; {
+		fmt.Println("	1) Search for a movie/actor/TV show")
+		fmt.Println("	2) Get statistics for movies/TV shows")
+		fmt.Println("	3) Add a new movie/TV show")
+		fmt.Println("	4) Update a movie/TV show")
+		fmt.Println("	5) Exit")
+		fmt.Print("Select an action: ")
+		scanner.Scan()
+		action, err = strconv.Atoi(scanner.Text())
+		if err != nil {
+			action = 0
+		}
+		switch action {
+		case 1:
+			Query()
+			break
+		case 2:
+			Statistics()
+			break
+		case 3:
+			Add()
+			break
+		case 4:
+			Update()
+			break
+		case 5:
+			fmt.Println("Bye!")
+			break
+		default:
+			fmt.Println("Action couldn't be parsed")
+		}
 	}
 }
