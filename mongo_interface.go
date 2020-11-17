@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,7 +18,7 @@ const mongoURI string = "mongodb://localhost:27017"
 
 // ConnectMongoDB : Setups a connection to the MongoDB server
 func ConnectMongoDB() (context.Context, *mongo.Client, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
 	return ctx, client, cancel, err
 }
@@ -46,7 +47,7 @@ func InitMongoDB(ctx context.Context, client *mongo.Client) error {
 	if err != nil {
 		return err
 	}
-	var docs []NetflixTitle
+	var docs []interface{}
 	err = json.Unmarshal(byteValues, &docs)
 	if err != nil {
 		return err
@@ -61,4 +62,25 @@ func InitMongoDB(ctx context.Context, client *mongo.Client) error {
 	}
 	fmt.Println("Documents inserted successfully!")
 	return nil
+}
+
+// ValueToString : maps a value to a string
+func ValueToString(value interface{}) string {
+	switch v := value.(type) {
+	case string:
+		return fmt.Sprintf("'%s'", v)
+	case float64:
+		if vAsInt := int64(v); v == float64(vAsInt) {
+			return fmt.Sprint(vAsInt)
+		}
+		return fmt.Sprint(v)
+	case primitive.A:
+		var valsAsStrings []string
+		for key := range v {
+			valsAsStrings = append(valsAsStrings, ValueToString(v[key]))
+		}
+		return "[ " + strings.Join(valsAsStrings, ", ") + " ]"
+	default:
+		return "unknown type"
+	}
 }
