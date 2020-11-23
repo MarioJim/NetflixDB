@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/go-redis/redis/v8"
 )
 
 func main() {
@@ -20,6 +22,11 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       5,  // use default DB
+	})
 
 	if err = InitMongoDB(ctx, client); err != nil {
 		log.Fatal(err)
@@ -40,7 +47,7 @@ func main() {
 		}
 		switch action {
 		case 1:
-			if err = Query(ctx, client, scanner); err != nil {
+			if err = Query(ctx, client, scanner, rdb); err != nil {
 				log.Fatal(err)
 			}
 		case 2:
