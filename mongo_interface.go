@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,7 +17,7 @@ const mongoURI string = "mongodb://localhost:27017"
 
 // ConnectMongoDB : Setups a connection to the MongoDB server
 func ConnectMongoDB() (context.Context, *mongo.Client, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
 	return ctx, client, cancel, err
 }

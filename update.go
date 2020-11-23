@@ -30,6 +30,7 @@ func Update(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner) e
 		return err
 	}
 
+	didUpdate := false
 	updatedFields := bson.D{}
 	for key, value := range searchResult {
 		if key == "_id" {
@@ -37,6 +38,7 @@ func Update(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner) e
 		}
 		fmt.Printf("%s: %s\n", key, ValueToString(value))
 		if ScanYesNoQuestion("Do you want to edit this field?", 'n', scanner) {
+			didUpdate = true
 			inpMessage := fmt.Sprintf("New value for '%s': ", key)
 			switch value := value.(type) {
 			case string:
@@ -67,6 +69,11 @@ func Update(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner) e
 				})
 			}
 		}
+	}
+
+	if !didUpdate {
+		fmt.Printf("No changes made to document %s!\n", maybeID)
+		return nil
 	}
 
 	update := bson.D{primitive.E{

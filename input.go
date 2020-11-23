@@ -23,8 +23,8 @@ func ScanYesNoQuestion(question string, defaultAns rune, scanner *bufio.Scanner)
 	} else if defaultAns == 'n' {
 		answerOptions = "[y/N] "
 	}
+	prompt := fmt.Sprintf("%s %s", question, answerOptions)
 	for {
-		prompt := fmt.Sprintf("%s %s", question, answerOptions)
 		switch ScanStringWithPrompt(prompt, scanner) {
 		case "Y", "y":
 			return true
@@ -59,16 +59,11 @@ func ScanNumberWithPrompt(message string, scanner *bufio.Scanner) float64 {
 // ScanStringArray : Scans strings while the user hasn't left the input empty
 func ScanStringArray(scanner *bufio.Scanner) []interface{} {
 	var stringArr []interface{}
-	for {
-		newElem := ScanStringWithPrompt(
-			"Write a new element or leave it empty to finish adding elements: ",
-			scanner,
-		)
-		if newElem == "" {
-			break
-		} else {
-			stringArr = append(stringArr, newElem)
-		}
+	message := "Write a new element or leave it empty to finish adding elements: "
+	newElem := ScanStringWithPrompt(message, scanner)
+	for newElem != "" {
+		stringArr = append(stringArr, newElem)
+		newElem = ScanStringWithPrompt(message, scanner)
 	}
 	return stringArr
 }
