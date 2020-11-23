@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,7 +14,7 @@ import (
 )
 
 // Query : Entry point for querying a document from the database
-func Query(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner) error {
+func Query(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner, rdb *redis.Client) error {
 	fmt.Println("Query")
 	fmt.Println()
 	fmt.Println("	1) Query for Movies")
@@ -27,6 +28,14 @@ func Query(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner) er
 	switch action {
 	case 1:
 		title := ScanStringWithPrompt("Write the title of the movie you want to query: ", scanner)
+		key := "Movie" + title
+		val, err := rdb.Get(ctx, key).Result()
+		if err == nil {
+			fmt.Println("Found in cache")
+			fmt.Println(val)
+			return nil
+		}
+		val = ""
 		filter := bson.D{primitive.E{Key: "title", Value: title},
 			primitive.E{Key: "type", Value: "Movie"}}
 		opts := options.FindOne().SetProjection(bson.M{"_id": 0, "director": 1, "cast": 1, "country": 1, "release_year": 1})
@@ -39,10 +48,24 @@ func Query(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner) er
 			return err
 		}
 		for key, value := range searchResult {
-			fmt.Printf("%s: %s\n", key, ValueToString(value))
+			val += fmt.Sprintf("%s: %s\n", key, ValueToString(value))
+
 		}
+		fmt.Println(val)
+
+		err = rdb.Set(ctx, key, val, 0).Err()
+		return err
+
 	case 2:
 		title := ScanStringWithPrompt("Write the title of the tv show you want to query: ", scanner)
+		key := "TV Show" + title
+		val, err := rdb.Get(ctx, key).Result()
+		if err == nil {
+			fmt.Println("Found in cache")
+			fmt.Println(val)
+			return nil
+		}
+		val = ""
 		filter := bson.D{primitive.E{Key: "title", Value: title},
 			primitive.E{Key: "type", Value: "TV Show"}}
 		opts := options.FindOne().SetProjection(bson.M{"_id": 0, "director": 1, "cast": 1, "country": 1, "release_year": 1})
@@ -55,22 +78,36 @@ func Query(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner) er
 			return err
 		}
 		for key, value := range searchResult {
-			fmt.Printf("%s: %s\n", key, ValueToString(value))
+			val += fmt.Sprintf("%s: %s\n", key, ValueToString(value))
 		}
+		fmt.Println(val)
+
+		err = rdb.Set(ctx, key, val, 0).Err()
+		return err
+
 	case 3:
 		actor := ScanStringWithPrompt("Write the name of the actor you want to query: ", scanner)
-		unwind := bson.D{{"$unwind", "$cast"}}
-		matchMovies := bson.D{{"$match", bson.D{
-			{"type", "Movie"},
+		key := "TV Show" + actor
+		val, err := rdb.Get(ctx, key).Result()
+		if err == nil {
+			fmt.Println("Found in cache")
+			fmt.Println(val)
+			return nil
+		}
+		val = ""
+		unwind := bson.D{primitive.E{Key: "$unwind", Value: "$cast"}}
+		matchMovies := bson.D{primitive.E{Key: "$match", Value: bson.D{
+			primitive.E{Key: "type", Value: "Movie"},
 		}}}
-		matchTV := bson.D{{"$match", bson.D{
-			{"type", "TV Show"},
+		matchTV := bson.D{primitive.E{Key: "$match", Value: bson.D{
+			primitive.E{Key: "type", Value: "TV Show"},
 		}}}
-		matchActor := bson.D{{"$match", bson.D{
-			{"cast", actor},
+		matchActor := bson.D{primitive.E{Key: "$match", Value: bson.D{
+			primitive.E{Key: "cast", Value: actor},
 		}}}
-		project := bson.D{{"$project", bson.D{
-			{"_id", 0}, {"title", 1},
+		project := bson.D{primitive.E{Key: "$project", Value: bson.D{
+			primitive.E{Key: "_id", Value: 0},
+			primitive.E{Key: "title", Value: 1},
 		}}}
 		cursor, err := GetTitlesColl(client).Aggregate(ctx, mongo.Pipeline{matchMovies, unwind, matchActor, project})
 		if err != nil {
@@ -80,9 +117,9 @@ func Query(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner) er
 		if err = cursor.All(ctx, &results); err != nil {
 			return err
 		}
-		fmt.Println("Movies:")
+		val += fmt.Sprintln("Movies:")
 		for _, result := range results {
-			fmt.Println(result["title"])
+			val += fmt.Sprintf(" - %s\n", result["title"])
 		}
 		cursor, err = GetTitlesColl(client).Aggregate(ctx, mongo.Pipeline{matchTV, unwind, matchActor, project})
 		if err != nil {
@@ -92,10 +129,13 @@ func Query(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner) er
 		if err = cursor.All(ctx, &results); err != nil {
 			return err
 		}
-		fmt.Println("TV Shows:")
+		val += fmt.Sprintln("TV Shows:")
 		for _, result := range results {
-			fmt.Println(result["title"])
+			val += fmt.Sprintf(" - %s\n", result["title"])
 		}
+		fmt.Println(val)
+		err = rdb.Set(ctx, key, val, 0).Err()
+		return err
 	default:
 		fmt.Println("Action couldn't be identified")
 	}
