@@ -45,7 +45,9 @@ func main() {
 		case 2:
 			Statistics()
 		case 3:
-			Add()
+			if err = Add(ctx, client, scanner); err != nil {
+				log.Fatal(err)
+			}
 		case 4:
 			if err = Update(ctx, client, scanner); err != nil {
 				log.Fatal(err)
