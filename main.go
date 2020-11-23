@@ -40,7 +40,9 @@ func main() {
 		}
 		switch action {
 		case 1:
-			Query()
+			if err = Query(ctx, client, scanner); err != nil {
+				log.Fatal(err)
+			}
 		case 2:
 			Statistics()
 		case 3:
