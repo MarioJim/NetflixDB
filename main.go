@@ -33,9 +33,8 @@ func main() {
 		fmt.Println("	3) Add a new movie/TV show")
 		fmt.Println("	4) Update a movie/TV show")
 		fmt.Println("	5) Exit")
-		fmt.Print("Select an action: ")
-		scanner.Scan()
-		action, err = strconv.Atoi(scanner.Text())
+		actionStr := ScanStringWithPrompt("Select an action: ", scanner)
+		action, err = strconv.Atoi(actionStr)
 		if err != nil {
 			action = 0
 		}
