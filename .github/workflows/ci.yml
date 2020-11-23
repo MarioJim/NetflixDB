@@ -12,10 +12,10 @@ jobs:
         with:
           go-version: '^1.15'
 
-      - name: Building executable
-        run: go build .
-
       - name: Run linter
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.32.2
+
+      - name: Building executable
+        run: go build .
