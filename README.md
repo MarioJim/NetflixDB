@@ -15,3 +15,5 @@ We can then make 4 types of queries:
 4. Update a movie/TV show
 
 Queries 3 and 4 are directly applied to the Mongo database, but queries 1 and 2 are also cached in a Redis instance (with a timeout and a maximum capacity)
+
+A video demonstrating its functionality can be found [here](https://youtu.be/-w_zyO6xgq8).
