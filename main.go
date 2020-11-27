@@ -24,9 +24,11 @@ func main() {
 	}()
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       5,  // use default DB
+		Password: "",
+		DB:       5,
 	})
+	rdb.ConfigSet(ctx, "maxmemory", "2mb")
+	rdb.ConfigSet(ctx, "maxmemory-policy", "allkeys-lru")
 
 	if err = InitMongoDB(ctx, client); err != nil {
 		log.Fatal(err)
@@ -55,11 +57,11 @@ func main() {
 				log.Fatal(err)
 			}
 		case 3:
-			if err = Add(ctx, client, scanner); err != nil {
+			if err = Add(ctx, client, scanner, rdb); err != nil {
 				log.Fatal(err)
 			}
 		case 4:
-			if err = Update(ctx, client, scanner); err != nil {
+			if err = Update(ctx, client, scanner, rdb); err != nil {
 				log.Fatal(err)
 			}
 		case 5:

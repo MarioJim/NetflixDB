@@ -5,27 +5,27 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	//"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Statistics : Entry point for getting statistics from the database's documents
-func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scanner, rdb *redis.Client) error {
-	
-	PrintMenuInConsole()
-	
+func Statistics(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner, rdb *redis.Client) error {
+
+	printMenuInConsole()
+
 	actionStr := ScanStringWithPrompt("Select an action: ", scanner)
 	action, err := strconv.Atoi(actionStr)
 	if err != nil {
 		action = 0
 	}
-	
+
 	switch action {
-	//Count number of movies and TV shows in the database
+	// Count number of movies and TV shows in the database
 	case 1:
 		key := "count_movies_shows"
 		val, err := rdb.Get(ctx, key).Result()
@@ -51,9 +51,9 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 			primitive.E{Key: "count", Value: bson.D{
 				primitive.E{Key: "$sum", Value: 1}}},
 		}}}
-		
+
 		cursor, err := GetTitlesColl(client).Aggregate(ctx, mongo.Pipeline{matchMovies, groupMovies})
-		
+
 		if err != nil {
 			return err
 		}
@@ -77,12 +77,12 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 		for _, result := range results {
 			val += fmt.Sprintf(" - %d\n", result["count"])
 		}
-		
+
 		fmt.Println(val)
-		err = rdb.Set(ctx, key, val, 0).Err()
+		err = rdb.Set(ctx, key, val, 30*time.Minute).Err()
 		return err
-		
-	//Total number of movies for a given country
+
+	// Total number of movies for a given country
 	case 2:
 		country := ScanStringWithPrompt("Write a country to count the total number of movies: ", scanner)
 		key := "total_movies_" + country
@@ -105,9 +105,9 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 			primitive.E{Key: "total", Value: bson.D{
 				primitive.E{Key: "$sum", Value: 1}}},
 		}}}
-		
+
 		cursor, err := GetTitlesColl(client).Aggregate(ctx, mongo.Pipeline{matchMovies, unwindCountries, matchCountries, group})
-		
+
 		if err != nil {
 			return err
 		}
@@ -119,19 +119,19 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 		for _, result := range results {
 			val += fmt.Sprintf(" - %d\n", result["total"])
 		}
-		
+
 		fmt.Println(val)
-		err = rdb.Set(ctx, key, val, 0).Err()
+		err = rdb.Set(ctx, key, val, 30*time.Minute).Err()
 		return err
-	
-	//Total number of movies for a given release year
+
+	// Total number of movies for a given release year
 	case 3:
 		year := ScanStringWithPrompt("Write a release year to count the total number of movies: ", scanner)
 		key := "total_movies_" + year
 		releaseYear, err := strconv.Atoi(year)
 		if err != nil {
-		fmt.Println(year, "is not a valid release year")
-		return nil
+			fmt.Println(year, "is not a valid release year")
+			return nil
 		}
 		val, err := rdb.Get(ctx, key).Result()
 		if err == nil {
@@ -140,7 +140,7 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 			return nil
 		}
 		val = ""
-		
+
 		matchMovies := bson.D{primitive.E{Key: "$match", Value: bson.D{
 			primitive.E{Key: "type", Value: "Movie"},
 			primitive.E{Key: "release_year", Value: releaseYear},
@@ -150,9 +150,9 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 			primitive.E{Key: "count", Value: bson.D{
 				primitive.E{Key: "$sum", Value: 1}}},
 		}}}
-		
+
 		cursor, err := GetTitlesColl(client).Aggregate(ctx, mongo.Pipeline{matchMovies, groupMovies})
-		
+
 		if err != nil {
 			return err
 		}
@@ -164,12 +164,12 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 		for _, result := range results {
 			val += fmt.Sprintf(" - %d\n", result["count"])
 		}
-		
+
 		fmt.Println(val)
-		err = rdb.Set(ctx, key, val, 0).Err()
+		err = rdb.Set(ctx, key, val, 30*time.Minute).Err()
 		return err
-	
-	//Top 10 actors in more movies
+
+	// Top 10 actors in more movies
 	case 4:
 		key := "top_10_actors"
 		val, err := rdb.Get(ctx, key).Result()
@@ -179,7 +179,7 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 			return nil
 		}
 		val = ""
-		
+
 		unwindCast := bson.D{primitive.E{Key: "$unwind", Value: "$cast"}}
 		groupActors := bson.D{primitive.E{Key: "$group", Value: bson.D{
 			primitive.E{Key: "_id", Value: "$cast"},
@@ -187,12 +187,12 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 				primitive.E{Key: "$sum", Value: 1}}},
 		}}}
 		sort := bson.D{primitive.E{Key: "$sort", Value: bson.D{
-		  primitive.E{Key: "count", Value: -1},
+			primitive.E{Key: "count", Value: -1},
 		}}}
 		limit := bson.D{primitive.E{Key: "$limit", Value: 10}}
-		
+
 		cursor, err := GetTitlesColl(client).Aggregate(ctx, mongo.Pipeline{unwindCast, groupActors, sort, limit})
-		
+
 		if err != nil {
 			return err
 		}
@@ -204,12 +204,12 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 		for _, result := range results {
 			val += fmt.Sprintf(" - %s\n", result["_id"])
 		}
-		
+
 		fmt.Println(val)
-		err = rdb.Set(ctx, key, val, 0).Err()
+		err = rdb.Set(ctx, key, val, 30*time.Minute).Err()
 		return err
-		
-	//Top 10 directors with most movies
+
+	// Top 10 directors with most movies
 	case 5:
 		key := "top_10_directors"
 		val, err := rdb.Get(ctx, key).Result()
@@ -219,7 +219,7 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 			return nil
 		}
 		val = ""
-		
+
 		unwindDirector := bson.D{primitive.E{Key: "$unwind", Value: "$director"}}
 		groupDirectors := bson.D{primitive.E{Key: "$group", Value: bson.D{
 			primitive.E{Key: "_id", Value: "$director"},
@@ -227,12 +227,11 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 				primitive.E{Key: "$sum", Value: 1}}},
 		}}}
 		sort := bson.D{primitive.E{Key: "$sort", Value: bson.D{
-		  primitive.E{Key: "count", Value: -1},
+			primitive.E{Key: "count", Value: -1},
 		}}}
 		limit := bson.D{primitive.E{Key: "$limit", Value: 10}}
-		
+
 		cursor, err := GetTitlesColl(client).Aggregate(ctx, mongo.Pipeline{unwindDirector, groupDirectors, sort, limit})
-		
 		if err != nil {
 			return err
 		}
@@ -244,18 +243,17 @@ func Statistics (ctx context.Context, client *mongo.Client, scanner *bufio.Scann
 		for _, result := range results {
 			val += fmt.Sprintf(" - %s\n", result["_id"])
 		}
-		
 		fmt.Println(val)
-		err = rdb.Set(ctx, key, val, 0).Err()
+		err = rdb.Set(ctx, key, val, 30*time.Minute).Err()
 		return err
-		
+
 	default:
 		fmt.Println("Action couldn't be identified")
 	}
 	return nil
 }
 
-func PrintMenuInConsole () {
+func printMenuInConsole() {
 	fmt.Println("Statistics")
 	fmt.Println()
 	fmt.Println("	1) Total number of movies and TV shows")

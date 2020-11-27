@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // Update : Entry point for updating a document in the database
-func Update(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner) error {
+func Update(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner, rdb *redis.Client) error {
 	maybeID := ScanStringWithPrompt("Write the ID of the title you want to edit: ", scanner)
 	id, err := strconv.Atoi(maybeID)
 	if err != nil {
@@ -84,5 +85,6 @@ func Update(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner) e
 		return err
 	}
 	fmt.Printf("Correctly updated document %s!\n", maybeID)
-	return nil
+
+	return rdb.FlushDB(ctx).Err()
 }
