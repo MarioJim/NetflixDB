@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/bson"
@@ -28,7 +29,7 @@ func Query(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner, rd
 	switch action {
 	case 1:
 		title := ScanStringWithPrompt("Write the title of the movie you want to query: ", scanner)
-		key := "Movie" + title
+		key := "Movie_" + title
 		val, err := rdb.Get(ctx, key).Result()
 		if err == nil {
 			fmt.Println("Found in cache")
@@ -53,12 +54,12 @@ func Query(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner, rd
 		}
 		fmt.Println(val)
 
-		err = rdb.Set(ctx, key, val, 0).Err()
+		err = rdb.Set(ctx, key, val, 30*time.Minute).Err()
 		return err
 
 	case 2:
 		title := ScanStringWithPrompt("Write the title of the tv show you want to query: ", scanner)
-		key := "TV Show" + title
+		key := "TVShow_" + title
 		val, err := rdb.Get(ctx, key).Result()
 		if err == nil {
 			fmt.Println("Found in cache")
@@ -82,12 +83,12 @@ func Query(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner, rd
 		}
 		fmt.Println(val)
 
-		err = rdb.Set(ctx, key, val, 0).Err()
+		err = rdb.Set(ctx, key, val, 30*time.Minute).Err()
 		return err
 
 	case 3:
 		actor := ScanStringWithPrompt("Write the name of the actor you want to query: ", scanner)
-		key := "TV Show" + actor
+		key := "Actor_" + actor
 		val, err := rdb.Get(ctx, key).Result()
 		if err == nil {
 			fmt.Println("Found in cache")
@@ -134,7 +135,7 @@ func Query(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner, rd
 			val += fmt.Sprintf(" - %s\n", result["title"])
 		}
 		fmt.Println(val)
-		err = rdb.Set(ctx, key, val, 0).Err()
+		err = rdb.Set(ctx, key, val, 30*time.Minute).Err()
 		return err
 	default:
 		fmt.Println("Action couldn't be identified")
