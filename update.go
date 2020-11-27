@@ -34,7 +34,7 @@ func Update(ctx context.Context, client *mongo.Client, scanner *bufio.Scanner, r
 	didUpdate := false
 	updatedFields := bson.D{}
 	for key, value := range searchResult {
-		if key == "_id" {
+		if key == "_id" || key == "show_id" {
 			continue
 		}
 		fmt.Printf("%s: %s\n", key, ValueToString(value))

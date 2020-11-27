@@ -98,7 +98,7 @@ func Statistics(ctx context.Context, client *mongo.Client, scanner *bufio.Scanne
 		}}}
 		unwindCountries := bson.D{primitive.E{Key: "$unwind", Value: "$country"}}
 		matchCountries := bson.D{primitive.E{Key: "$match", Value: bson.D{
-			primitive.E{Key: "$country", Value: country},
+			primitive.E{Key: "country", Value: country},
 		}}}
 		group := bson.D{primitive.E{Key: "$group", Value: bson.D{
 			primitive.E{Key: "_id", Value: "total_movies"},
@@ -258,7 +258,7 @@ func printMenuInConsole() {
 	fmt.Println()
 	fmt.Println("	1) Total number of movies and TV shows")
 	fmt.Println("	2) Total number of movies for a given country")
-	fmt.Println("	3) Total number of TV shows for a given release year")
+	fmt.Println("	3) Total number of movies for a given release year")
 	fmt.Println("	4) Top 10 actors appearing in more movies")
 	fmt.Println("	5) Top 10 directors with more movies")
 }
